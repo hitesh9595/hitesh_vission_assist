@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionAssist AI - Complete Solution for Blind</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .control-panel {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary { background: #4361ee; color: white; }
+        .btn-success { background: #06d6a0; color: white; }
+        .btn-warning { background: #ffb703; color: #333; }
+        .btn-danger { background: #ef233c; color: white; }
+        .btn-info { background: #3a0ca3; color: white; }
+        .btn-purple { background: #7209b7; color: white; }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 10px;
+        }
+
+        .map-container {
+            height: 350px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .location-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: white;
+            font-size: 1em;
+        }
+
+        .route-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .camera-container {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        #cameraFeed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #2d3748;
+            color: #a0aec0;
+        }
+
+        .object-list {
+            list-style: none;
+            margin: 20px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .object-item {
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            border-left: 4px solid #06d6a0;
+        }
+
+        .description-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-style: italic;
+            border-left: 4px solid #ffb703;
+        }
+
+        /* Document Upload Section */
+        .upload-area {
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #4361ee;
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .upload-area i {
+            font-size: 3em;
+            margin-bottom: 10px;
+            color: #4361ee;
+        }
+
+        .extracted-text {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .prompt-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .prompt-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+        }
+
+        .prompt-btn:hover {
+            background: #4361ee;
+        }
+
+        /* Voice Assistant */
+        .voice-assistant {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .voice-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .listening-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ef233c;
+            animation: pulse 1.5s infinite;
+        }
+
+        .listening-indicator.active {
+            background: #06d6a0;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .voice-transcript {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 60px;
+        }
+
+        .mode-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: white;
+            border: 2px solid #4361ee;
+            z-index: 1000;
+        }
+
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-eye"></i> VisionAssist AI</h1>
+            <p>Complete Solution for Visually Impaired - Navigation, Detection, Document Reading & Voice Assistant</p>
+        </div>
+
+        <div class="control-panel">
+            <button class="btn btn-primary" id="startCameraBtn"><i class="fas fa-camera"></i> Start Camera</button>
+            <button class="btn btn-success" id="pauseVoiceBtn"><i class="fas fa-pause"></i> Pause</button>
+            <button class="btn btn-warning" id="resumeVoiceBtn"><i class="fas fa-play"></i> Resume</button>
+            <button class="btn btn-danger" id="stopCameraBtn"><i class="fas fa-stop"></i> Stop</button>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Navigation Card -->
+            <div class="card">
+                <h2><i class="fas fa-map-marked-alt"></i> Navigation</h2>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+                <div class="location-inputs">
+                    <input type="text" id="startLocation" placeholder="Current Location" value="My Location" readonly>
+                    <input type="text" id="endLocation" placeholder="Enter destination (e.g., Central Park)">
+                </div>
+                <button class="route-btn" id="findRouteBtn"><i class="fas fa-route"></i> Find Walking Route</button>
+                <div id="routeInstructions" style="max-height: 150px; overflow-y: auto;"></div>
+            </div>
+
+            <!-- Object Detection Card -->
+            <div class="card">
+                <h2><i class="fas fa-robot"></i> Object Detection</h2>
+                <div class="camera-container">
+                    <video id="cameraFeed" autoplay playsinline style="display: none;"></video>
+                    <canvas id="cameraCanvas" style="display: none;"></canvas>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <i class="fas fa-camera" style="font-size: 3em; margin-bottom: 10px;"></i>
+                        <p>Camera not started</p>
+                    </div>
+                </div>
+                <ul class="object-list" id="objectList">
+                    <li class="object-item">Waiting for detection...</li>
+                </ul>
+                <div class="description-box" id="descriptionBox">
+                    <p id="descriptionText">No objects detected</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Reader Card -->
+        <div class="card" style="margin-bottom: 25px;">
+            <h2><i class="fas fa-file-alt"></i> Document Reader</h2>
+            
+            <!-- Upload Area -->
+            <div class="upload-area" id="uploadArea">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h3>Click to Upload Document</h3>
+                <p>Upload any image containing text (receipts, letters, signs)</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+
+            <!-- Extracted Text -->
+            <div id="extractedTextSection" style="display: none;">
+                <h3><i class="fas fa-file-lines"></i> Extracted Text:</h3>
+                <div class="extracted-text" id="extractedText"></div>
+                
+                <div class="prompt-buttons">
+                    <button class="prompt-btn" id="explainSimpleBtn"><i class="fas fa-align-left"></i> Explain Simply</button>
+                    <button class="prompt-btn" id="explainSummaryBtn"><i class="fas fa-list"></i> Summary</button>
+                </div>
+
+                <div id="explanationSection" style="display: none;">
+                    <h3><i class="fas fa-lightbulb"></i> Explanation:</h3>
+                    <div class="description-box" id="explanationText"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Assistant Card -->
+        <div class="card">
+            <h2><i class="fas fa-microphone"></i> Voice Assistant</h2>
+            
+            <div class="voice-assistant">
+                <div class="voice-status">
+                    <div class="listening-indicator" id="listeningIndicator"></div>
+                    <span id="voiceStatusText">Click "Start Listening" to ask questions</span>
+                </div>
+
+                <div class="control-panel" style="margin: 15px 0;">
+                    <button class="btn btn-info" id="startListeningBtn"><i class="fas fa-microphone"></i> Start Listening</button>
+                    <button class="btn btn-danger" id="stopListeningBtn"><i class="fas fa-stop"></i> Stop</button>
+                </div>
+
+                <div class="voice-transcript" id="voiceTranscript">
+                    <p><i class="fas fa-quote-left"></i> Your questions will appear here</p>
+                </div>
+
+                <div id="voiceResponse" style="margin-top: 15px; display: none;">
+                    <h4><i class="fas fa-robot"></i> Assistant Response:</h4>
+                    <div class="description-box" id="voiceResponseText"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mode-indicator" id="modeIndicator">
+            <i class="fas fa-check-circle"></i> System Active
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    
+    <script>
+        // ==================== GLOBAL VARIABLES ====================
+        let map, routingControl, currentMarker;
+        let currentPosition = null;
+        let cameraStream = null;
+        let detectionInterval = null;
+        let isCameraActive = false;
+        let isVoicePaused = false;
+        let isMuted = false;
+        let lastDescription = "";
+        
+        // Speech synthesis
+        const synth = window.speechSynthesis;
+        
+        // Speech recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+        }
+
+        // ==================== VOICE FUNCTIONS ====================
+        function speak(text) {
+            if (isMuted || isVoicePaused || !text) return;
+            
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            
+            const voices = synth.getVoices();
+            const englishVoice = voices.find(v => v.lang.includes('en-US'));
+            if (englishVoice) utterance.voice = englishVoice;
+            
+            synth.speak(utterance);
+        }
+
+        // ==================== MAP FUNCTIONS ====================
+        function initMap() {
+            map = L.map('map').setView([40.7128, -74.0060], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        currentPosition = [latitude, longitude];
+                        
+                        map.setView(currentPosition, 16);
+                        
+                        if (currentMarker) {
+                            currentMarker.setLatLng(currentPosition);
+                        } else {
+                            currentMarker = L.marker(currentPosition).addTo(map)
+                                .bindPopup('📍 You are here').openPopup();
+                        }
+                    },
+                    (error) => console.error('GPS error:', error),
+                    { enableHighAccuracy: true }
+                );
+            }
+        }
+
+        async function findRoute() {
+            const destination = document.getElementById('endLocation').value;
+            if (!destination || !currentPosition) {
+                speak('Please enter destination and ensure GPS is active');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/geocode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: destination })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    speak('Destination not found');
+                    return;
+                }
+
+                if (routingControl) map.removeControl(routingControl);
+
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(currentPosition[0], currentPosition[1]),
+                        L.latLng(data.lat, data.lon)
+                    ],
+                    routeWhileDragging: false,
+                    lineOptions: { styles: [{ color: '#4361ee', weight: 6 }] }
+                }).addTo(map);
+
+                routingControl.on('routesfound', function(e) {
+                    const route = e.routes[0];
+                    const distance = (route.summary.totalDistance / 1000).toFixed(1);
+                    const time = Math.round(route.summary.totalTime / 60);
+                    
+                    speak(`Route found. Distance ${distance} kilometers. Walking time ${time} minutes.`);
+                });
+
+            } catch (error) {
+                console.error('Route error:', error);
+            }
+        }
+
+        // ==================== CAMERA FUNCTIONS ====================
+        async function startCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                
+                const video = document.getElementById('cameraFeed');
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+                
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                
+                isCameraActive = true;
+                isVoicePaused = false;
+                
+                speak('Camera started');
+                startDetection();
+                
+            } catch (err) {
+                speak('Cannot access camera');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('cameraFeed').style.display = 'none';
+            document.getElementById('cameraPlaceholder').style.display = 'flex';
+            isCameraActive = false;
+            if (detectionInterval) clearInterval(detectionInterval);
+        }
+
+        function startDetection() {
+            detectionInterval = setInterval(async () => {
+                if (!isCameraActive || isVoicePaused) return;
+                
+                const video = document.getElementById('cameraFeed');
+                const canvas = document.getElementById('cameraCanvas');
+                
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    
+                    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    try {
+                        const response = await fetch('/api/analyze-frame', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image_data: imageData })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.status === 'success') {
+                            // Update object list
+                            const list = document.getElementById('objectList');
+                            if (data.detectedObjects?.length > 0) {
+                                list.innerHTML = data.detectedObjects.map(obj => 
+                                    `<li class="object-item"><i class="fas fa-circle" style="color: #06d6a0; font-size: 0.6em;"></i> ${obj}</li>`
+                                ).join('');
+                            } else {
+                                list.innerHTML = '<li class="object-item">No objects detected</li>';
+                            }
+                            
+                            // Update description
+                            document.getElementById('descriptionText').innerHTML = data.audioDescription;
+                            lastDescription = data.audioDescription;
+                            
+                            if (!isVoicePaused) speak(data.audioDescription);
+                        }
+                    } catch (error) {
+                        console.error('Detection error:', error);
+                    }
+                }
+            }, 3000);
+        }
+
+        // ==================== DOCUMENT READER ====================
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('extractedTextSection').style.display = 'none';
+            document.getElementById('extractedText').innerHTML = '<div class="loader"></div>';
+
+            try {
+                const response = await fetch('/api/extract-text', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('extractedText').innerHTML = data.text;
+                    document.getElementById('extractedTextSection').style.display = 'block';
+                    document.getElementById('explanationSection').style.display = 'none';
+                    speak('Text extracted successfully');
+                } else {
+                    document.getElementById('extractedText').innerHTML = 'Error extracting text';
+                }
+            } catch (error) {
+                document.getElementById('extractedText').innerHTML = 'Error: ' + error.message;
+            }
+        });
+
+        async function explainText(promptType) {
+            const text = document.getElementById('extractedText').innerText;
+            
+            document.getElementById('explanationSection').style.display = 'block';
+            document.getElementById('explanationText').innerHTML = '<div class="loader"></div>';
+
+            try {
+                const response = await fetch('/api/explain-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, prompt: promptType })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('explanationText').innerHTML = data.explanation;
+                    speak(data.explanation);
+                } else {
+                    document.getElementById('explanationText').innerHTML = 'Error getting explanation';
+                }
+            } catch (error) {
+                document.getElementById('explanationText').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        document.getElementById('explainSimpleBtn').addEventListener('click', () => explainText('simple'));
+        document.getElementById('explainSummaryBtn').addEventListener('click', () => explainText('summary'));
+
+        // ==================== VOICE ASSISTANT ====================
+        if (recognition) {
+            let isListening = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('listeningIndicator').classList.add('active');
+                document.getElementById('voiceStatusText').innerHTML = 'Listening... Speak now';
+                document.getElementById('voiceTranscript').innerHTML = '<p><i class="fas fa-circle"></i> Listening...</p>';
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                document.getElementById('listeningIndicator').classList.remove('active');
+                document.getElementById('voiceStatusText').innerHTML = 'Click "Start Listening" to ask questions';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                
+                document.getElementById('voiceTranscript').innerHTML = `<p><i class="fas fa-quote-left"></i> "${transcript}"</p>`;
+
+                // Simple responses based on keywords
+                const response = document.getElementById('voiceResponse');
+                const responseText = document.getElementById('voiceResponseText');
+                
+                response.style.display = 'block';
+                
+                if (transcript.toLowerCase().includes('object') || transcript.toLowerCase().includes('see')) {
+                    responseText.innerHTML = lastDescription || 'No objects currently detected';
+                } else if (transcript.toLowerCase().includes('location') || transcript.toLowerCase().includes('where')) {
+                    if (currentPosition) {
+                        responseText.innerHTML = `You are at latitude ${currentPosition[0].toFixed(4)} and longitude ${currentPosition[1].toFixed(4)}`;
+                    } else {
+                        responseText.innerHTML = 'Waiting for GPS signal';
+                    }
+                } else if (transcript.toLowerCase().includes('help')) {
+                    responseText.innerHTML = 'You can ask me about objects you see, your current location, or ask me to explain text from documents.';
+                } else if (transcript.toLowerCase().includes('document') || transcript.toLowerCase().includes('read')) {
+                    responseText.innerHTML = 'Please upload a document using the Document Reader section above.';
+                } else {
+                    responseText.innerHTML = 'I heard you. You can ask about objects, location, or documents.';
+                }
+                
+                speak(responseText.innerHTML);
+            };
+
+            document.getElementById('startListeningBtn').addEventListener('click', () => {
+                if (!isListening) recognition.start();
+            });
+
+            document.getElementById('stopListeningBtn').addEventListener('click', () => {
+                if (isListening) recognition.stop();
+            });
+        } else {
+            document.getElementById('voiceStatusText').innerHTML = 'Voice recognition not supported in this browser';
+            document.getElementById('startListeningBtn').disabled = true;
+            document.getElementById('stopListeningBtn').disabled = true;
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            
+            document.getElementById('startCameraBtn').addEventListener('click', startCamera);
+            document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
+            document.getElementById('pauseVoiceBtn').addEventListener('click', () => {
+                isVoicePaused = true;
+                speak('Voice paused');
+            });
+            document.getElementById('resumeVoiceBtn').addEventListener('click', () => {
+                isVoicePaused = false;
+                speak('Voice resumed');
+            });
+            document.getElementById('findRouteBtn').addEventListener('click', findRoute);
+
+            // Welcome message
+            setTimeout(() => {
+                speak('Welcome to VisionAssist. You can use camera for object detection, upload documents to read text, or ask questions using voice assistant.');
+            }, 2000);
+        });
+
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+        });
+    </script>
+</body>
+</html>
